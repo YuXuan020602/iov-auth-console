@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useState } from 'react';
 import { PageContainer } from '@/components/PageContainer';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -21,16 +22,90 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { GROUP_COLORS } from '@/data/mock';
 import { knowledgeApi } from '@/lib/api';
 import { adaptKnowledge } from '@/lib/adapters';
+import type { KnowledgeEntry } from '@/data/mock';
 import { useApiList } from '@/lib/useApiList';
 import { BookOpen, Plus, Search, Clock, AlertTriangle, Eye } from 'lucide-react';
 
-const CATEGORIES = ['全部', '认证差异', '踩坑总结', 'Log 分析', '抓包方法', 'FAQ', '术语表'];
+// MVP 阶段：前端无登录系统，硬编码当前用户为王工
+const CURRENT_USER_ID = 'cmvyld7tq0002111gtzavc1jc';
+const CATEGORIES = ['认证差异', '踩坑总结', 'Log 分析', '抓包方法', 'FAQ', '术语表'];
+
+const emptyForm = {
+  title: '',
+  category: '认证差异',
+  group: 'CP',
+  summary: '',
+  body: '',
+  secretLevel: 'L1',
+};
+
+function defaultReviewDue() {
+  const d = new Date();
+  d.setDate(d.getDate() + 30);
+  return d.toISOString();
+}
 
 export function KnowledgePage() {
-  const { data: knowledge, error } = useApiList(() => knowledgeApi.list().then((r) => r.map(adaptKnowledge)));
+  const [knowledge, setKnowledge] = useState<KnowledgeEntry[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [form, setForm] = useState(emptyForm);
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const loadKnowledge = useCallback(() => {
+    knowledgeApi.list().then((r) => setKnowledge(r.map(adaptKnowledge))).catch((e) => setError(e?.message ?? '加载失败'));
+  }, []);
+  useEffect(() => { loadKnowledge(); }, [loadKnowledge]);
+
+  const handleOpenCreate = useCallback(() => {
+    setForm({ ...emptyForm });
+    setFormError(null);
+    setDialogOpen(true);
+  }, []);
+
+  const handleCreate = useCallback(async () => {
+    if (!form.title.trim() || !form.body.trim()) {
+      setFormError('请填写标题和正文');
+      return;
+    }
+    setSubmitting(true);
+    setFormError(null);
+    try {
+      await knowledgeApi.create({
+        title: form.title.trim(),
+        category: form.category,
+        group: form.group,
+        body: form.body.trim(),
+        ownerId: CURRENT_USER_ID,
+        reviewDue: defaultReviewDue(),
+        status: 'Valid',
+        secretLevel: form.secretLevel,
+        summary: form.summary.trim() || undefined,
+      });
+      setDialogOpen(false);
+      loadKnowledge();
+    } catch (e: any) {
+      setFormError(e?.message ?? '创建失败');
+    } finally {
+      setSubmitting(false);
+    }
+  }, [form, loadKnowledge]);
+
   const expiring = knowledge.filter((k) => k.status === '待复审');
 
   return (
@@ -43,7 +118,7 @@ export function KnowledgePage() {
             <Search className="w-3.5 h-3.5 mr-1.5" />
             全文搜索
           </Button>
-          <Button size="sm">
+          <Button size="sm" onClick={handleOpenCreate}>
             <Plus className="w-3.5 h-3.5 mr-1.5" />
             新建条目
           </Button>
@@ -183,6 +258,78 @@ export function KnowledgePage() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* 新建知识库弹窗 */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>新建知识库条目</DialogTitle>
+            <DialogDescription>创建后默认状态为「有效」，30 天后需复审确认。</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-3 py-2">
+            <div className="grid gap-1.5">
+              <Label className="text-xs">标题 *</Label>
+              <Input
+                className="h-8 text-sm"
+                placeholder="如 HiCar 4.5 蓝牙连接踩坑"
+                value={form.title}
+                onChange={(e) => setForm({ ...form, title: e.target.value })}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-1.5">
+                <Label className="text-xs">分类</Label>
+                <select
+                  className="h-8 rounded-md border border-border bg-transparent px-2 text-sm"
+                  value={form.category}
+                  onChange={(e) => setForm({ ...form, category: e.target.value })}
+                >
+                  {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div className="grid gap-1.5">
+                <Label className="text-xs">所属组</Label>
+                <select
+                  className="h-8 rounded-md border border-border bg-transparent px-2 text-sm"
+                  value={form.group}
+                  onChange={(e) => setForm({ ...form, group: e.target.value })}
+                >
+                  <option value="CP">CP</option>
+                  <option value="AA">AA</option>
+                  <option value="HiCar">HiCar</option>
+                </select>
+              </div>
+            </div>
+            <div className="grid gap-1.5">
+              <Label className="text-xs">摘要（可选）</Label>
+              <Input
+                className="h-8 text-sm"
+                placeholder="一句话概括核心内容"
+                value={form.summary}
+                onChange={(e) => setForm({ ...form, summary: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-1.5">
+              <Label className="text-xs">正文（Markdown）*</Label>
+              <Textarea
+                className="min-h-[120px] text-sm"
+                placeholder="# 问题描述&#10;&#10;## 排查过程&#10;...&#10;## 结论&#10;..."
+                value={form.body}
+                onChange={(e) => setForm({ ...form, body: e.target.value })}
+              />
+            </div>
+            {formError && <div className="text-xs text-destructive">{formError}</div>}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setDialogOpen(false)} disabled={submitting}>
+              取消
+            </Button>
+            <Button size="sm" onClick={handleCreate} disabled={submitting}>
+              {submitting ? '创建中…' : '创建'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PageContainer>
   );
 }

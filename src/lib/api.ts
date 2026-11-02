@@ -74,8 +74,11 @@ export const sopApi = {
   get: (id: string) => request<any>(`/sop/${id}`),
   create: (data: any) => request<any>('/sop', { method: 'POST', body: JSON.stringify(data) }),
   versions: (sopId: string) => request<any[]>(`/sop/${sopId}/versions`),
+  getVersion: (versionId: string) => request<any>(`/sop/version/${versionId}`),
   createVersion: (sopId: string, data: any) =>
     request<any>(`/sop/${sopId}/versions`, { method: 'POST', body: JSON.stringify(data) }),
+  updateVersion: (versionId: string, data: any) =>
+    request<any>(`/sop/version/${versionId}`, { method: 'PATCH', body: JSON.stringify(data) }),
   submitVersion: (versionId: string) => request<any>(`/sop/version/${versionId}/submit`, { method: 'POST' }),
   approveVersion: (versionId: string, reviewerId: string) =>
     request<any>(`/sop/version/${versionId}/approve`, { method: 'POST', body: JSON.stringify({ reviewerId }) }),

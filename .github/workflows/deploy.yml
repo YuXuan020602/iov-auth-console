@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       VITE_BASE_PATH: /iov-auth-console/
-      VITE_API_BASE: ${{ vars.VITE_API_BASE || '' }}
+      VITE_API_BASE: ${{ vars.VITE_API_BASE || 'https://plot-jokes-extraction-pirates.trycloudflare.com' }}
     steps:
       - uses: actions/checkout@v4
 

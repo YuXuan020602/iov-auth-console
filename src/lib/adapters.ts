@@ -42,7 +42,7 @@ export const adaptSOP = (s: any): SOPEntry => ({
   no: s.sopNo,
   title: s.title,
   group: (s.group ?? 'CP') as Group,
-  version: s.version ?? 'v0.1',
+  version: (s.version ?? 'v0.1').replace(/^v/, ''),
   status: '生效' as SOPStatus,
   owner: s.owner?.name ?? '—',
   certType: s.certType ?? '—',

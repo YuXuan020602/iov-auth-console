@@ -113,7 +113,8 @@ export const syncApi = {
   list: () => request<any[]>('/sync/messages'),
   get: (id: string) => request<any>(`/sync/messages/${id}`),
   publish: (data: any) => request<any>('/sync/messages', { method: 'POST', body: JSON.stringify(data) }),
-  confirm: (id: string) => request<any>(`/sync/messages/${id}/confirm`, { method: 'POST' }),
+  confirm: (id: string, userId: string) =>
+    request<any>(`/sync/messages/${id}/confirm`, { method: 'POST', body: JSON.stringify({ userId }) }),
   weeklyReport: (week: string) => request<any>(`/sync/weekly-report/${week}`, { method: 'POST' }),
 };
 

@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useState } from 'react';
 import { PageContainer } from '@/components/PageContainer';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -5,6 +6,10 @@ import { useApp } from '@/lib/app';
 import { projectsApi, sopApi, forumApi, syncApi } from '@/lib/api';
 import { adaptProject, adaptSOP, adaptForumPost, adaptSyncMessage } from '@/lib/adapters';
 import { useApiList } from '@/lib/useApiList';
+import type { SyncMessage } from '@/data/mock';
+
+// MVP 阶段：前端无登录系统，硬编码当前用户为王工
+const CURRENT_USER_ID = 'cmvyld7tq0002111gtzavc1jc';
 import {
   ClipboardList,
   AlertTriangle,
@@ -21,10 +26,29 @@ import {
 
 export function WorkbenchPage() {
   const { data: projects, error } = useApiList(() => projectsApi.list().then((r) => r.map(adaptProject)));
-  const { data: messages } = useApiList(() => syncApi.list().then((r) => r.map(adaptSyncMessage)));
   const { data: sops } = useApiList(() => sopApi.list().then((r) => r.map(adaptSOP)));
   const { data: posts } = useApiList(() => forumApi.list().then((r) => r.map(adaptForumPost)));
   const { setCurrentPage } = useApp();
+
+  // 同步消息自行管理（确认后需要刷新）
+  const [messages, setMessages] = useState<SyncMessage[]>([]);
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const loadMessages = useCallback(() => {
+    syncApi.list().then((r) => r.map(adaptSyncMessage)).then(setMessages);
+  }, []);
+  useEffect(() => { loadMessages(); }, [loadMessages]);
+
+  const handleConfirm = useCallback(async (id: string) => {
+    setConfirmingId(id);
+    try {
+      await syncApi.confirm(id, CURRENT_USER_ID);
+      loadMessages();
+    } catch (e) {
+      console.error('确认失败', e);
+    } finally {
+      setConfirmingId(null);
+    }
+  }, [loadMessages]);
 
   // 当前用户视角数据
   const pendingSync = messages.filter((m) => m.targetUser === 'all' || (Array.isArray(m.targetUser) && m.targetUser.includes('王工')));
@@ -97,7 +121,14 @@ export function WorkbenchPage() {
                     {m.group} · {m.issuer} · 已确认 {m.confirmedCount}/{m.totalCount}
                   </div>
                 </div>
-                <Button size="sm" className="h-6 text-xs shrink-0">确认</Button>
+                <Button
+                  size="sm"
+                  className="h-6 text-xs shrink-0"
+                  disabled={confirmingId === m.id}
+                  onClick={() => handleConfirm(m.id)}
+                >
+                  {confirmingId === m.id ? '确认中…' : '确认'}
+                </Button>
               </div>
             ))}
           </CardContent>

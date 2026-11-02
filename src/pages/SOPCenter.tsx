@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useState } from 'react';
 import { PageContainer } from '@/components/PageContainer';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,16 +17,82 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useApp } from '@/lib/app';
 import { SOP_STATUS_COLORS } from '@/data/mock';
 import { sopApi } from '@/lib/api';
 import { adaptSOP } from '@/lib/adapters';
-import { useApiList } from '@/lib/useApiList';
+import type { SOPEntry } from '@/data/mock';
 import { Search, Plus, Eye, GitCompare, AlertTriangle, CheckCircle2, FileText } from 'lucide-react';
 
+// MVP 阶段：前端无登录系统，硬编码当前用户为王工（与 Workbench 一致）
+const CURRENT_USER_ID = 'cmvyld7tq0002111gtzavc1jc';
+
+const emptyForm = {
+  sopNo: '',
+  title: '',
+  group: 'CP',
+  certType: '',
+  vehicle: '',
+  secretLevel: 'L1',
+};
+
 export function SOPCenterPage() {
-  const { data: sops, error } = useApiList(() => sopApi.list().then((r) => r.map(adaptSOP)));
+  const [sops, setSops] = useState<SOPEntry[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [form, setForm] = useState(emptyForm);
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   const { group } = useApp();
+
+  const loadSops = useCallback(() => {
+    sopApi.list().then((r) => setSops(r.map(adaptSOP))).catch((e) => setError(e?.message ?? '加载失败'));
+  }, []);
+  useEffect(() => { loadSops(); }, [loadSops]);
+
+  const handleOpenCreate = useCallback(() => {
+    setForm({ ...emptyForm, group });
+    setFormError(null);
+    setDialogOpen(true);
+  }, [group]);
+
+  const handleCreate = useCallback(async () => {
+    if (!form.sopNo.trim() || !form.title.trim() || !form.certType.trim() || !form.vehicle.trim()) {
+      setFormError('请填写 SOP 编号、标题、认证类型和适用车型/平台');
+      return;
+    }
+    setSubmitting(true);
+    setFormError(null);
+    try {
+      await sopApi.create({
+        sopNo: form.sopNo.trim(),
+        title: form.title.trim(),
+        group: form.group,
+        certType: form.certType.trim(),
+        vehicle: form.vehicle.trim(),
+        version: 'v0.1',
+        ownerId: CURRENT_USER_ID,
+        secretLevel: form.secretLevel,
+      });
+      setDialogOpen(false);
+      loadSops();
+    } catch (e: any) {
+      setFormError(e?.message ?? '创建失败');
+    } finally {
+      setSubmitting(false);
+    }
+  }, [form, loadSops]);
+
   // MVP 简化：左侧目录 + 右侧默认生效版 + 归档版强提示
   const visibleSOPS = sops.filter((s) => s.group === group || s.secretLevel === 'L1');
   const draftOrPending = visibleSOPS.filter((s) => s.status === '草稿' || s.status === '待审');
@@ -41,7 +108,7 @@ export function SOPCenterPage() {
             <Search className="w-3.5 h-3.5 mr-1.5" />
             按条款搜索
           </Button>
-          <Button size="sm">
+          <Button size="sm" onClick={handleOpenCreate}>
             <Plus className="w-3.5 h-3.5 mr-1.5" />
             新建 SOP
           </Button>
@@ -195,6 +262,91 @@ export function SOPCenterPage() {
           </Tabs>
         </div>
       </div>
+
+      {/* 新建 SOP 弹窗 */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>新建 SOP</DialogTitle>
+            <DialogDescription>创建 SOP 基本信息后，可在详情中继续编写 v0.1 初版内容。</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-3 py-2">
+            <div className="grid gap-1.5">
+              <Label className="text-xs">SOP 编号 *</Label>
+              <Input
+                className="h-8 text-sm"
+                placeholder="如 SOP-CP-CCC-010"
+                value={form.sopNo}
+                onChange={(e) => setForm({ ...form, sopNo: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-1.5">
+              <Label className="text-xs">标题 *</Label>
+              <Input
+                className="h-8 text-sm"
+                placeholder="SOP 标题"
+                value={form.title}
+                onChange={(e) => setForm({ ...form, title: e.target.value })}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-1.5">
+                <Label className="text-xs">所属组</Label>
+                <select
+                  className="h-8 rounded-md border border-border bg-transparent px-2 text-sm"
+                  value={form.group}
+                  onChange={(e) => setForm({ ...form, group: e.target.value })}
+                >
+                  <option value="CP">CP</option>
+                  <option value="AA">AA</option>
+                  <option value="HiCar">HiCar</option>
+                </select>
+              </div>
+              <div className="grid gap-1.5">
+                <Label className="text-xs">认证类型 *</Label>
+                <Input
+                  className="h-8 text-sm"
+                  placeholder="如 CCC / 3C / HiCar"
+                  value={form.certType}
+                  onChange={(e) => setForm({ ...form, certType: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-1.5">
+                <Label className="text-xs">适用车型/平台 *</Label>
+                <Input
+                  className="h-8 text-sm"
+                  placeholder="如 Android 车机"
+                  value={form.vehicle}
+                  onChange={(e) => setForm({ ...form, vehicle: e.target.value })}
+                />
+              </div>
+              <div className="grid gap-1.5">
+                <Label className="text-xs">密级</Label>
+                <select
+                  className="h-8 rounded-md border border-border bg-transparent px-2 text-sm"
+                  value={form.secretLevel}
+                  onChange={(e) => setForm({ ...form, secretLevel: e.target.value })}
+                >
+                  <option value="L1">L1</option>
+                  <option value="L2">L2</option>
+                  <option value="L3">L3</option>
+                </select>
+              </div>
+            </div>
+            {formError && <div className="text-xs text-destructive">{formError}</div>}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setDialogOpen(false)} disabled={submitting}>
+              取消
+            </Button>
+            <Button size="sm" onClick={handleCreate} disabled={submitting}>
+              {submitting ? '创建中…' : '创建'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PageContainer>
   );
 }

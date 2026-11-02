@@ -114,7 +114,7 @@ export function KnowledgePage() {
       subtitle="认证差异 · 踩坑总结 · Log 分析 · 抓包方法 · FAQ · 术语表"
       actions={
         <>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={() => alert('全文搜索（TODO）\n\n将弹出高级搜索框，支持：\n• 正文 Markdown 全文检索\n• 按分类/组/密级多维筛选\n• 引用次数、收藏数、复审到期排序')}>
             <Search className="w-3.5 h-3.5 mr-1.5" />
             全文搜索
           </Button>
@@ -250,7 +250,7 @@ export function KnowledgePage() {
                     <Badge variant="outline" className="text-[10px] font-normal">{k.secretLevel}</Badge>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" className="h-7 w-7"><Eye className="w-3.5 h-3.5" /></Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" title="查看" onClick={() => alert('查看知识库详情（TODO）\n\n将打开 Markdown 渲染视图，显示完整正文、引用此条目的 SOP 列表、历史版本。')}><Eye className="w-3.5 h-3.5" /></Button>
                   </TableCell>
                 </TableRow>
               ))}

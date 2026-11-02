@@ -32,7 +32,7 @@ export function SearchPage() {
       title="搜索与标签"
       subtitle="统一标签体系 · 全组预定义维度 · 不可随意新增自由标签"
       actions={
-        <Button variant="outline" size="sm">
+        <Button variant="outline" size="sm" onClick={() => alert('申请新增标签（TODO）\n\n统一标签体系不可随意新增自由标签。\n\n如需新增，将触发审批流程：\n1. 填写标签维度、名称、理由\n2. 提交后进入管理员审批队列\n3. 审批通过后自动加入统一体系\n4. 审批结果邮件通知')}>
           <Tag className="w-3.5 h-3.5 mr-1.5" />
           申请新增标签
         </Button>
@@ -108,7 +108,7 @@ export function SearchPage() {
           <Tag className="w-4 h-4 text-primary" />
           <div className="text-sm font-medium">统一标签维度（全组预定义，不可随意新增）</div>
           <span className="text-[11px] text-muted-foreground ml-2">新增标签需管理员审批</span>
-          <Button variant="outline" size="sm" className="ml-auto h-7 text-xs">
+          <Button variant="outline" size="sm" className="ml-auto h-7 text-xs" onClick={() => alert('申请新增标签（TODO）\n\n统一标签体系不可随意新增自由标签。\n\n如需新增，将触发审批流程：\n1. 填写标签维度、名称、理由\n2. 提交后进入管理员审批队列\n3. 审批通过后自动加入统一体系')}>
             <Plus className="w-3 h-3 mr-1" />
             申请新增
           </Button>

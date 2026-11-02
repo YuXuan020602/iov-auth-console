@@ -104,7 +104,7 @@ export function SOPCenterPage() {
       subtitle={`${group} 组 · 默认仅展示生效版，过期版本将强提示`}
       actions={
         <>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={() => alert('按条款搜索（TODO）\n\n支持按 SOP 条款编号、标准章节号、关键术语全文检索。\n如输入"5.3"可匹配 GB 44495-2024 第 5.3 条相关 SOP。')}>
             <Search className="w-3.5 h-3.5 mr-1.5" />
             按条款搜索
           </Button>
@@ -124,7 +124,7 @@ export function SOPCenterPage() {
           <div className="text-sm font-medium text-destructive">检测到你正在查看已过期版本：CP-SOP-001 v1.3（归档）</div>
           <div className="text-xs text-muted-foreground mt-0.5">请使用当前生效版 v2.1。使用归档版将被记录审计并向组长推送提醒。</div>
         </div>
-        <Button size="sm" variant="destructive" className="h-7 text-xs shrink-0">
+        <Button size="sm" variant="destructive" className="h-7 text-xs shrink-0" onClick={() => alert('即将跳转到 CP-SOP-001 v2.1 生效版（TODO）\n\n将自动关闭当前归档版本标签页，并在主窗口打开最新生效版。')}>
           跳转到 v2.1 →
         </Button>
       </div>
@@ -182,7 +182,7 @@ export function SOPCenterPage() {
                     <div className="flex-1 text-sm truncate">{s.title}</div>
                     <Badge className={SOP_STATUS_COLORS[s.status] + ' text-[10px]'}>{s.status}</Badge>
                     <span className="text-[11px] text-muted-foreground">v{s.version}</span>
-                    <Button size="sm" variant="outline" className="h-7 text-xs">查看并审批</Button>
+                    <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => alert('查看并审批（TODO）\n\n将打开 SOP 版本详情，支持：\n• 对比上一版变更内容\n• 查看审批历史\n• 批准/驳回操作（调用 sopApi.approveVersion / rejectVersion）')}>查看并审批</Button>
                   </div>
                 ))}
               </CardContent>
@@ -238,8 +238,8 @@ export function SOPCenterPage() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="inline-flex gap-1">
-                            <Button variant="ghost" size="icon" className="h-7 w-7"><Eye className="w-3.5 h-3.5" /></Button>
-                            <Button variant="ghost" size="icon" className="h-7 w-7"><GitCompare className="w-3.5 h-3.5" /></Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" title="查看" onClick={() => alert('查看 SOP 详情（TODO）\n\n将在右侧面板展开 SOP 完整 Markdown 内容。')}><Eye className="w-3.5 h-3.5" /></Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" title="版本对比" onClick={() => alert('版本对比（TODO）\n\n将打开 GitCompare 视图，对比当前 v' + s.version + ' 与历史版本的差异。')}><GitCompare className="w-3.5 h-3.5" /></Button>
                             {s.used30d && (
                               <span className="my-auto ml-1" title="30 天内使用过">
                                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />

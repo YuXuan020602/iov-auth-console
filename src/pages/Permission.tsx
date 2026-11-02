@@ -53,11 +53,11 @@ export function PermissionPage() {
       subtitle="按组 + 项目 + 密级三维授权 · 下载和变更留审计"
       actions={
         <>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={() => alert('导出审计日志（TODO）\n\n将导出 CSV/Excel，包含：\n• 时间 / 操作人 / 操作类型 / 资源 / 级别\n• 可按时间范围、操作人、资源类型筛选\n• 敏感操作（L2/L3 下载）自动脱敏')}>
             <ClipboardList className="w-3.5 h-3.5 mr-1.5" />
             导出审计
           </Button>
-          <Button size="sm">
+          <Button size="sm" onClick={() => alert('创建临时账号（TODO）\n\n将打开创建表单，填写：\n• 外部人员姓名/邮箱\n• 绑定项目（下拉选择）\n• 有效期（默认 30 天，最长 90 天）\n• 密级上限（默认 L2）\n• 自动发送邀请邮件\n• 到期前 7 天自动提醒负责人')}>
             <Plus className="w-3.5 h-3.5 mr-1.5" />
             创建临时账号
           </Button>
@@ -169,8 +169,8 @@ export function PermissionPage() {
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">项目负责人 + 组长双审</TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" className="h-7 text-xs">续期</Button>
-                        <Button variant="ghost" size="sm" className="h-7 text-xs text-destructive">禁用</Button>
+                        <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => alert('续期（TODO）\n\n将打开续期对话框，支持：\n• 延长 30 / 60 / 90 天\n• 或手动指定新的到期日期\n• 续期后自动通知账号持有人和项目负责人')}>续期</Button>
+                        <Button variant="ghost" size="sm" className="h-7 text-xs text-destructive" onClick={() => alert('禁用外部账号（TODO）\n\n此操作将立即撤销该账号的所有访问权限，\n并向账号持有人发送禁用通知邮件。\n（⚠ 实际禁用需调用后端 /admin/accounts/:id/disable 端点）')}>禁用</Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -184,7 +184,7 @@ export function PermissionPage() {
         <TabsContent value="audit" className="mt-3">
           <div className="flex items-center gap-2 mb-3">
             <Input placeholder="搜索操作人 / 资源 / 操作类型" className="h-8 text-xs max-w-sm" />
-            <Button variant="outline" size="sm" className="h-8 text-xs">时间范围：最近 7 天</Button>
+            <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => alert('时间范围筛选（TODO）\n\n将弹出日期选择器，可选：\n• 最近 7 天 / 30 天 / 90 天\n• 自定义起止日期\n• 快捷选择"本月/上周"')}>时间范围：最近 7 天</Button>
           </div>
           <Card>
             <CardContent className="p-0">

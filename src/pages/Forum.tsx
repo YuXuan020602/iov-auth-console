@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useState } from 'react';
 import { PageContainer } from '@/components/PageContainer';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -30,20 +31,147 @@ import {
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { GROUP_COLORS, PROBLEM_TYPE_COLORS } from '@/data/mock';
-import { forumApi } from '@/lib/api';
+import { forumApi, knowledgeApi } from '@/lib/api';
 import { adaptForumPost } from '@/lib/adapters';
-import { useApiList } from '@/lib/useApiList';
+import type { ForumPost } from '@/data/mock';
 import { MessageSquarePlus, CheckCircle2, ArrowRight, FileText, Eye, MessageCircle, Lightbulb, Users } from 'lucide-react';
 
+// MVP 阶段：前端无登录系统，硬编码当前用户为王工
+const CURRENT_USER_ID = 'cmvyld7tq0002111gtzavc1jc';
+
+const GROUP_MAP: Record<string, string> = {
+  cp: 'CP',
+  aa: 'AA',
+  hicar: 'HiCar',
+};
+
+const emptyForm = {
+  certType: '',
+  projectRef: '',
+  swVersion: '',
+  problemType: '',
+  title: '',
+  body: '',
+  group: 'CP',
+};
+
 export function ForumPage() {
-  const { data: posts, error } = useApiList(() => forumApi.list().then((r) => r.map(adaptForumPost)));
+  const [posts, setPosts] = useState<ForumPost[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  // 发帖 Dialog
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [form, setForm] = useState(emptyForm);
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  // 转知识库 loading
+  const [convertingId, setConvertingId] = useState<string | null>(null);
+
+  const load = useCallback(() => {
+    forumApi.list()
+      .then((r) => setPosts(r.map(adaptForumPost)))
+      .catch((e) => setError(e?.message ?? '加载失败'));
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  const resetForm = useCallback(() => {
+    setForm(emptyForm);
+    setFormError(null);
+  }, []);
+
+  const handleOpenDialog = useCallback((open: boolean) => {
+    if (open) resetForm();
+    setDialogOpen(open);
+  }, [resetForm]);
+
+  const validateForm = useCallback(() => {
+    if (!form.certType || !form.swVersion.trim() || !form.problemType || !form.title.trim() || !form.body.trim()) {
+      return '请填写：认证类型、软件版本、问题类型、标题、正文（带 * 号的字段）';
+    }
+    return null;
+  }, [form]);
+
+  // ===== 发布帖子 =====
+  const handlePublish = useCallback(async () => {
+    const err = validateForm();
+    if (err) {
+      setFormError(err);
+      return;
+    }
+    setSubmitting(true);
+    setFormError(null);
+    try {
+      await forumApi.create({
+        group: GROUP_MAP[form.certType] ?? 'CP',
+        certType: form.certType === 'cp' ? 'CarPlay' : form.certType === 'aa' ? 'Android Auto' : 'HiCar',
+        vehiclePlatform: form.projectRef.trim() || undefined,
+        swVersion: form.swVersion.trim(),
+        problemType: form.problemType,
+        title: form.title.trim(),
+        body: form.body.trim(),
+        authorId: CURRENT_USER_ID,
+      });
+      alert('✅ 帖子发布成功！');
+      setDialogOpen(false);
+      load();
+    } catch (e: any) {
+      setFormError(e?.message ?? '发布失败');
+    } finally {
+      setSubmitting(false);
+    }
+  }, [form, validateForm, load]);
+
+  // ===== 存草稿 =====
+  const handleSaveDraft = useCallback(async () => {
+    if (!form.title.trim()) {
+      setFormError('至少填写标题才能存草稿');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      // MVP：草稿也直接创建（后端暂不支持 Draft 状态）
+      await forumApi.create({
+        group: GROUP_MAP[form.certType] ?? 'CP',
+        certType: form.certType === 'cp' ? 'CarPlay' : form.certType === 'aa' ? 'Android Auto' : 'HiCar',
+        vehiclePlatform: form.projectRef.trim() || undefined,
+        swVersion: form.swVersion.trim() || '待补充',
+        problemType: form.problemType || 'std',
+        title: '[草稿] ' + form.title.trim(),
+        body: form.body.trim() || '（正文待补充）',
+        authorId: CURRENT_USER_ID,
+      });
+      alert('📝 草稿已保存！（MVP 阶段草稿作为带 [草稿] 标记的帖子创建）');
+      setDialogOpen(false);
+      load();
+    } catch (e: any) {
+      setFormError(e?.message ?? '保存失败');
+    } finally {
+      setSubmitting(false);
+    }
+  }, [form, load]);
+
+  // ===== 一键转知识库 =====
+  const handleConvertToKB = useCallback(async (postId: string, postTitle: string) => {
+    if (!confirm(`确认将帖子「${postTitle}」转为知识库条目？\n\n转换后将：\n• 自动生成摘要\n• 状态标记为"已转知识库"\n• 保留原帖内容`)) return;
+    setConvertingId(postId);
+    try {
+      await knowledgeApi.convertFromPost(postId);
+      alert('🎉 已成功转为知识库条目！\n\n可在知识库页面查看和编辑。');
+      load();
+    } catch (e: any) {
+      alert('转换失败：' + (e?.message ?? e) + '\n\n（后端 /knowledge/convert/:postId 端点可能需要先实现）');
+    } finally {
+      setConvertingId(null);
+    }
+  }, [load]);
 
   return (
     <PageContainer
       title="结构化论坛"
       subtitle="发帖必须选认证类型 / 项目 / 版本 / 问题类型 · 避免水化 · 一键转知识库"
       actions={
-        <Dialog>
+        <Dialog open={dialogOpen} onOpenChange={handleOpenDialog}>
           <DialogTrigger render={<Button size="sm" />}>
             <MessageSquarePlus className="w-3.5 h-3.5 mr-1.5" />
             发帖
@@ -56,8 +184,8 @@ export function ForumPage() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs">认证类型 <span className="text-destructive">*</span></Label>
-                <Select>
-                  <SelectTrigger className="h-8 text-xs mt-1"><SelectValue /></SelectTrigger>
+                <Select value={form.certType || undefined} onValueChange={(v) => setForm({ ...form, certType: v, group: GROUP_MAP[v] ?? form.group })}>
+                  <SelectTrigger className="h-8 text-xs mt-1"><SelectValue placeholder="请选择" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="cp">CarPlay</SelectItem>
                     <SelectItem value="aa">Android Auto</SelectItem>
@@ -67,16 +195,26 @@ export function ForumPage() {
               </div>
               <div>
                 <Label className="text-xs">关联项目</Label>
-                <Input className="h-8 text-xs mt-1" placeholder="从项目矩阵选择…" />
+                <Input
+                  className="h-8 text-xs mt-1"
+                  placeholder="从项目矩阵选择…"
+                  value={form.projectRef}
+                  onChange={(e) => setForm({ ...form, projectRef: e.target.value })}
+                />
               </div>
               <div>
                 <Label className="text-xs">软件版本 <span className="text-destructive">*</span></Label>
-                <Input className="h-8 text-xs mt-1" placeholder="iOS 18.4 / Android 14" />
+                <Input
+                  className="h-8 text-xs mt-1"
+                  placeholder="iOS 18.4 / Android 14"
+                  value={form.swVersion}
+                  onChange={(e) => setForm({ ...form, swVersion: e.target.value })}
+                />
               </div>
               <div>
                 <Label className="text-xs">问题类型 <span className="text-destructive">*</span></Label>
-                <Select>
-                  <SelectTrigger className="h-8 text-xs mt-1"><SelectValue /></SelectTrigger>
+                <Select value={form.problemType || undefined} onValueChange={(v) => setForm({ ...form, problemType: v })}>
+                  <SelectTrigger className="h-8 text-xs mt-1"><SelectValue placeholder="请选择" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="func">功能异常</SelectItem>
                     <SelectItem value="conn">连接问题</SelectItem>
@@ -88,16 +226,32 @@ export function ForumPage() {
               </div>
               <div className="col-span-2">
                 <Label className="text-xs">标题（≤80 字） <span className="text-destructive">*</span></Label>
-                <Input className="h-8 text-xs mt-1" placeholder="概括问题，避免“求帮助”" />
+                <Input
+                  className="h-8 text-xs mt-1"
+                  placeholder="概括问题，避免「求帮助」"
+                  maxLength={80}
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                />
               </div>
               <div className="col-span-2">
                 <Label className="text-xs">正文（推荐模板） <span className="text-destructive">*</span></Label>
-                <Textarea className="text-xs mt-1 h-32 font-mono resize-none" placeholder={`### 问题描述\n\n### 复现步骤\n1.\n2.\n\n### 期望结果\n\n### 已尝试方案`} />
+                <Textarea
+                  className="text-xs mt-1 h-32 font-mono resize-none"
+                  placeholder={`### 问题描述\n\n### 复现步骤\n1.\n2.\n\n### 期望结果\n\n### 已尝试方案`}
+                  value={form.body}
+                  onChange={(e) => setForm({ ...form, body: e.target.value })}
+                />
               </div>
             </div>
+            {formError && <div className="text-xs text-destructive mt-2">{formError}</div>}
             <DialogFooter>
-              <Button variant="outline" size="sm">存草稿</Button>
-              <Button size="sm">发布帖子</Button>
+              <Button variant="outline" size="sm" onClick={handleSaveDraft} disabled={submitting}>
+                存草稿
+              </Button>
+              <Button size="sm" onClick={handlePublish} disabled={submitting}>
+                {submitting ? '发布中…' : '发布帖子'}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -191,9 +345,15 @@ export function ForumPage() {
               {/* Right actions */}
               <div className="flex flex-col items-end gap-1 shrink-0">
                 {post.hasBestAnswer && !post.convertedToKB && (
-                  <Button size="sm" variant="outline" className="h-7 text-xs">
-                    一键转知识库
-                    <ArrowRight className="w-3 h-3 ml-1" />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs"
+                    disabled={convertingId === post.id}
+                    onClick={() => handleConvertToKB(post.id, post.title)}
+                  >
+                    {convertingId === post.id ? '转换中…' : '一键转知识库'}
+                    {convertingId !== post.id && <ArrowRight className="w-3 h-3 ml-1" />}
                   </Button>
                 )}
               </div>

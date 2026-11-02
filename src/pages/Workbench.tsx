@@ -61,7 +61,7 @@ export function WorkbenchPage() {
       title="工作台"
       subtitle="王工 · CP 组 · 今日需要处理和关注的事项"
       actions={
-        <Button variant="outline" size="sm">
+        <Button variant="outline" size="sm" onClick={() => alert('本周周报（TODO）\n\n将生成本周个人周报摘要，包含：\n• 本周处理的同步消息数\n• 参与的项目进度变化\n• 待我审批的 SOP 列表\n• 论坛发布/回复统计\n• 下周计划（手动填写）\n\n可一键导出 Markdown 或直接推送到钉钉周报。')}>
           <Calendar className="w-3.5 h-3.5 mr-1.5" />
           本周周报
         </Button>
